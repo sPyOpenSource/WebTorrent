@@ -35,6 +35,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTab, setActiveTab] = useState("feed");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Custom states
   const [commentInput, setCommentInput] = useState("");
@@ -303,8 +304,15 @@ export default function App() {
         {/* Title Logo Group */}
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-1.5 text-slate-400 hover:text-white cursor-pointer hover:bg-[#202024] rounded-xl transition"
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setMobileMenuOpen(!mobileMenuOpen);
+              } else {
+                setSidebarCollapsed(!sidebarCollapsed);
+              }
+            }}
+            className="p-1.5 text-slate-400 hover:text-white cursor-pointer hover:bg-[#202024] rounded-xl transition flex items-center justify-center"
+            title="Toggle Sidebar"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -323,7 +331,7 @@ export default function App() {
             </div>
             <div className="flex flex-col">
               <h1 className="text-sm font-extrabold tracking-tight text-white leading-none">
-                YouTube <span className="text-indigo-400">WebTorrent</span>
+                Web<span className="text-indigo-400">Torrent</span>
               </h1>
               <span className="text-[9px] font-mono text-slate-500 tracking-wider">SWARM MEDIA SWAPPERS</span>
             </div>
@@ -462,6 +470,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* Navigation Sidebar */}
         <Sidebar
+          collapsed={sidebarCollapsed}
           activeTab={activeTab}
           onSelectTab={(tab) => {
             setActiveTab(tab);

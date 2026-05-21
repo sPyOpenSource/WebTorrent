@@ -88,7 +88,7 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
 
       client.seed(selectedFile, {
         name: selectedFile.name,
-        comment: "Seeded live on YouTube WebTorrent",
+        comment: "Seeded live on WebTorrent",
         announce: [
           "wss://tracker.btorrent.xyz",
           "wss://tracker.openwebtorrent.com",

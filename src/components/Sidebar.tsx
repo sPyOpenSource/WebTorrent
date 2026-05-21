@@ -4,9 +4,10 @@ interface SidebarProps {
   activeTab: string;
   onSelectTab: (tab: string) => void;
   onEnterMagnetTab: () => void;
+  collapsed?: boolean;
 }
 
-export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab }: SidebarProps) {
+export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab, collapsed = false }: SidebarProps) {
   const navItems = [
     { id: "feed", name: "Home Feed", icon: Home },
     { id: "trending", name: "Trending", icon: Flame },
@@ -15,7 +16,14 @@ export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab }: Si
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[#0A0A0B]/90 backdrop-blur px-2 py-4 h-[calc(100vh-64px)] overflow-y-auto border-r border-slate-800 sticky top-16" id="navigation-sidebar">
+    <aside 
+      className={`hidden md:flex flex-col shrink-0 bg-[#0A0A0B]/90 backdrop-blur h-[calc(100vh-64px)] overflow-y-auto sticky top-16 transition-all duration-300 ease-in-out ${
+        collapsed 
+          ? "w-0 px-0 py-0 opacity-0 border-r-0 pointer-events-none overflow-hidden select-none" 
+          : "w-60 px-2 py-4 opacity-100 border-r border-slate-800"
+      }`} 
+      id="navigation-sidebar"
+    >
       <div className="flex flex-col gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
