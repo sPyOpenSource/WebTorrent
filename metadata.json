@@ -1,0 +1,6 @@
+{
+  "name": "YouTube WebTorrent",
+  "description": "A decentralized peer-to-peer video streaming platform styled like YouTube and powered entirely by WebTorrent in the browser. Synchronized upstream with sPyOpenSource/WebTorrent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
