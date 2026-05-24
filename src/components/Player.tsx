@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VideoTorrent, TorrentStats } from "../types";
 import { SwarmStats } from "../services/socket";
-import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle } from "lucide-react";
+import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle, Maximize, Minimize } from "lucide-react";
 
 interface PlayerProps {
   video: VideoTorrent;
@@ -23,6 +23,49 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
   // Periodical stats tracker
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Synchronize HTML5 Fullscreen state
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      if (containerRef.current.requestFullscreen) {
+        containerRef.current.requestFullscreen();
+      } else if ((containerRef.current as any).webkitRequestFullscreen) {
+        (containerRef.current as any).webkitRequestFullscreen();
+      } else if ((containerRef.current as any).msRequestFullscreen) {
+        (containerRef.current as any).msRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
+      }
+    }
+  };
 
   // Check if WebTorrent exists on window
   useEffect(() => {
@@ -301,6 +344,27 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           controls
           playsInline
         />
+
+        {/* Fullscreen API Toggle Button Overlay */}
+        {!loading && !errorMsg && (
+          <button
+            onClick={toggleFullscreen}
+            className="absolute top-4 left-4 z-25 bg-[#161618]/90 hover:bg-[#202024] backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs text-white shadow-lg cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 opacity-90 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 group/btn"
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
+                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Exit Fullscreen</span>
+              </>
+            ) : (
+              <>
+                <Maximize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
+                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Fullscreen</span>
+              </>
+            )}
+          </button>
+        )}
 
         {/* Loading / WebRTC Connecting State */}
         {loading && (

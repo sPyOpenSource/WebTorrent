@@ -6,6 +6,7 @@ import VideoGrid from "./components/VideoGrid";
 import Player from "./components/Player";
 import UploadForm from "./components/UploadForm";
 import StatsHub from "./components/StatsHub";
+import { CloudExporter } from "./components/CloudHub";
 import { swarmSocket, SwarmStats } from "./services/socket";
 import { 
   Play, 
@@ -622,8 +623,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right Column: Recommended Up Next List */}
+              {/* Right Column: Recommended Up Next List & Cloud Exporter */}
               <div className="flex flex-col gap-4">
+                <CloudExporter 
+                  videoId={selectedVideo.id}
+                  videoTitle={selectedVideo.title}
+                  magnetUrl={selectedVideo.magnetUrl}
+                  infoHash={currentTorrentStats?.infoHash}
+                  activePeers={currentTorrentStats?.peersCount}
+                />
+                
                 <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-widest px-1">Up Next Stream</h3>
                 <div className="flex flex-col gap-3">
                   {videos

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { VideoTorrent } from "../types";
-import { Upload, FilePlay, Check, Copy, Share2, Sparkles, FolderHeart, Info, Film, ArrowRight } from "lucide-react";
+import { Upload, FilePlay, Check, Copy, Share2, Sparkles, FolderHeart, Info, Film, ArrowRight, Cloud } from "lucide-react";
+import { CloudPickerModal } from "./CloudHub";
 
 interface UploadFormProps {
   onVideoCreated: (newVideo: VideoTorrent) => void;
@@ -18,6 +19,9 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
   const [copied, setCopied] = useState(false);
   const [seedSpeed, setSeedSpeed] = useState<number>(0);
   const [numPeers, setNumPeers] = useState<number>(0);
+
+  // Cloud Integration states
+  const [cloudPickerOpen, setCloudPickerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webtorrentClientRef = useRef<any>(null);
@@ -227,6 +231,46 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
             )}
           </div>
 
+          {/* Cloud Storage Shortcut Bar */}
+          {!selectedFile && (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="h-px bg-slate-800/60 flex-1" />
+                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest shrink-0">Or Stream From Cloud Drive</span>
+                <div className="h-px bg-slate-800/60 flex-1" />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setCloudPickerOpen(true)}
+                  className="cursor-pointer bg-[#0A0A0B]/50 hover:bg-[#161618] border border-slate-800 hover:border-indigo-500/30 rounded-2xl py-2.5 px-3 text-[11px] font-bold text-slate-350 transition flex items-center justify-center gap-1.5"
+                >
+                  <Cloud className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">Google Drive</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCloudPickerOpen(true)}
+                  className="cursor-pointer bg-[#0A0A0B]/50 hover:bg-[#161618] border border-slate-800 hover:border-indigo-500/30 rounded-2xl py-2.5 px-3 text-[11px] font-bold text-slate-350 transition flex items-center justify-center gap-1.5"
+                >
+                  <Cloud className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span className="truncate">OneDrive</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCloudPickerOpen(true)}
+                  className="cursor-pointer bg-[#0A0A0B]/50 hover:bg-[#161618] border border-slate-800 hover:border-indigo-500/30 rounded-2xl py-2.5 px-3 text-[11px] font-bold text-slate-350 transition flex items-center justify-center gap-1.5"
+                >
+                  <Cloud className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                  <span className="truncate">iCloud Drive</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-4">
             {/* Title */}
             <div className="flex flex-col gap-1.5">
@@ -399,6 +443,18 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
           There are no middleman storage servers hosting your file. Other users will streams files byte-by-byte directly from your browser's physical storage sandbox.
         </div>
       </div>
+
+      {/* Cloud Picker Modal overlay */}
+      <CloudPickerModal
+        isOpen={cloudPickerOpen}
+        onClose={() => setCloudPickerOpen(false)}
+        onFileSelected={(file, displayTitle, fileDesc, fileCat) => {
+          setSelectedFile(file);
+          setTitle(displayTitle);
+          setDescription(fileDesc);
+          if (fileCat) setCategory(fileCat);
+        }}
+      />
     </div>
   );
 }
