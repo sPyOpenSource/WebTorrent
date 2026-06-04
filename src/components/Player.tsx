@@ -33,8 +33,13 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
   // Periodical stats tracker
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const liveSwarmStatsRef = useRef<SwarmStats | null>(liveSwarmStats || null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    liveSwarmStatsRef.current = liveSwarmStats || null;
+  }, [liveSwarmStats]);
 
   // Synchronize HTML5 Fullscreen state
   useEffect(() => {
@@ -492,6 +497,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
     // Provide placeholder fictitious live stats to show inside diagnostic boards!
     const statsInterval = setInterval(() => {
+      const latestLiveSwarmStats = liveSwarmStatsRef.current;
       const mockStats: TorrentStats = {
         infoHash: `Livepeer-RTCMesh-${video.broadcasterId || "stream"}`,
         magnetUrl: video.magnetUrl || "",
@@ -500,10 +506,10 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         downloaded: 0,
         uploaded: 0,
         progress: 1.0,
-        peersCount: liveSwarmStats ? liveSwarmStats.activePeersCount : 1,
+        peersCount: latestLiveSwarmStats ? latestLiveSwarmStats.activePeersCount : 1,
         timeRemaining: 0,
         ratio: 1.0,
-        numPeers: liveSwarmStats ? liveSwarmStats.activePeersCount : 1
+        numPeers: latestLiveSwarmStats ? latestLiveSwarmStats.activePeersCount : 1
       };
       setStats(mockStats);
       if (onStatsUpdate) onStatsUpdate(mockStats);
@@ -523,7 +529,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         videoRef.current.srcObject = null;
       }
     };
-  }, [video, webtorrentLoaded, liveSwarmStats]);
+  }, [video, webtorrentLoaded]);
 
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {

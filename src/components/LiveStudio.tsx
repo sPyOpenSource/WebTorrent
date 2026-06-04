@@ -51,6 +51,8 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const isLiveRef = useRef(false);
+  const streamIdRef = useRef<string | null>(null);
 
   // Clean elements on unmount or stop
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
       setAudioEnabled(true);
 
       // If we are currently broadcasting (isLive === true), seamlessly hot-swap the tracks for all active peer connections!
-      if (isLive) {
+      if (isLiveRef.current) {
         const newVideoTrack = stream.getVideoTracks()[0];
         const newAudioTrack = stream.getAudioTracks()[0];
 
@@ -162,6 +164,8 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
     }
 
     const uniqueId = `live-${peerName.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
+    streamIdRef.current = uniqueId;
+    isLiveRef.current = true;
     setStreamId(uniqueId);
     setIsLive(true);
     setComments([]);
@@ -275,7 +279,7 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
 
     // Capture Local ICE Candidates and forward to viewer of choice
     pc.onicecandidate = (event) => {
-      if (event.candidate && isLive && streamId) {
+      if (event.candidate && isLiveRef.current && streamIdRef.current) {
         swarmSocket.send({
           type: "rtc_signal",
           target: viewerId,
@@ -356,6 +360,8 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
     swarmSocket.leaveRoom();
 
     // Reset states
+    isLiveRef.current = false;
+    streamIdRef.current = null;
     setIsCapturing(false);
     setIsLive(false);
     setConnectedViewersCount(0);
