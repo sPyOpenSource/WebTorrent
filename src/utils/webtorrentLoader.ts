@@ -1,11 +1,11 @@
 type LoaderStatus = "IDLE" | "LOADING" | "LOADED" | "FAILED";
 
 const CDN_URLS = [
-  "https://cdn.jsdelivr.net/npm/webtorrent@2.5.5/webtorrent.min.js",
-  "https://unpkg.com/webtorrent@2.5.5/dist/webtorrent.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/webtorrent/2.5.5/webtorrent.min.js",
-  "https://cdn.jsdelivr.net/npm/webtorrent/webtorrent.min.js",
-  "https://unpkg.com/webtorrent/dist/webtorrent.min.js"
+  "https://cdn.jsdelivr.net/npm/webtorrent@1/webtorrent.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.24.1/webtorrent.min.js",
+  "https://unpkg.com/webtorrent@1.24.1/dist/webtorrent.min.js",
+  "https://cdn.jsdelivr.net/npm/webtorrent@1.18.0/webtorrent.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/webtorrent/1.18.0/webtorrent.min.js"
 ];
 
 let currentStatus: LoaderStatus = "IDLE";
