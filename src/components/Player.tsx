@@ -747,50 +747,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         )}
       </div>
 
-      {/* P2P Live Stats Dashboard Toolbar */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 bg-[#161618] border border-slate-800 rounded-3xl p-4 text-xs font-mono shadow-md">
-          <div className="flex flex-col gap-1 p-2.5 bg-[#0A0A0B]/50 rounded-2xl border border-slate-800/60">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans font-semibold">Download Speed</span>
-            <span className="text-indigo-400 font-bold text-sm flex items-center gap-1">
-              <DownloadCloud className="w-3.5 h-3.5" />
-              {formatSpeed(stats.downloadSpeed)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 p-2.5 bg-[#0A0A0B]/50 rounded-2xl border border-slate-800/60">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans font-semibold">Upload Seed Speed</span>
-            <span className="text-sky-400 font-bold text-sm flex items-center gap-1">
-              <UploadCloud className="w-3.5 h-3.5" />
-              {formatSpeed(stats.uploadSpeed)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 p-2.5 bg-[#0A0A0B]/50 rounded-2xl border border-slate-800/60">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans font-semibold">Downloaded Share</span>
-            <span className="text-white text-sm font-semibold">
-              {formatSize(stats.downloaded)} <span className="text-[10px] text-slate-500">({(stats.progress * 100).toFixed(1)}%)</span>
-            </span>
-          </div>
-          <div className="flex flex-col gap-1 p-2.5 bg-[#0A0A0B]/50 rounded-2xl border border-slate-800/60">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans font-semibold">Connected Swarm</span>
-            <span className="text-white text-sm font-semibold flex items-center gap-1.5 font-sans">
-              <Users className="w-3.5 h-3.5 text-indigo-400" />
-              {stats.peersCount} peer{stats.peersCount !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="col-span-2 sm:col-span-4 lg:col-span-1 flex flex-col gap-1 p-2.5 bg-[#0A0A0B]/50 rounded-2xl border border-slate-800/60">
-            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans font-semibold">Full Buffer Time</span>
-            <span className="text-amber-400 text-sm font-semibold">
-              {stats.progress >= 1.0 ? (
-                <span className="text-emerald-400 flex items-center gap-1.5 font-sans font-semibold">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Seeding Live
-                </span>
-              ) : (
-                formatTime(stats.timeRemaining)
-              )}
-            </span>
-          </div>
-        </div>
-      )}
+
 
       {/* Multi-file selector panel, displayed if there are indeed multiple streamable assets */}
       {allFiles.length > 1 && (
@@ -827,62 +784,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           </div>
         </div>
       )}
-
-      {/* Peer details view for technical insight */}
-      {((stats && activePeers.length > 0) || (liveSwarmStats && liveSwarmStats.peerPipelines && liveSwarmStats.peerPipelines.length > 0)) && (
-        <div className="bg-[#161618]/30 rounded-3xl p-4 border border-slate-800 shadow-sm">
-          <div className="flex justify-between items-center mb-2.5">
-            <h5 className="text-xs font-bold text-slate-300 flex items-center gap-1.5 font-mono">
-              <Users className="w-3.5 h-3.5 text-indigo-400" />
-              PEER PIPELINES DECENTRALIZED SWARM ({Math.max(activePeers.length, liveSwarmStats?.peerPipelines?.length || 0)})
-            </h5>
-            <span className="text-[9px] px-2.5 py-1 rounded-full bg-indigo-950/30 text-indigo-400 font-mono border border-indigo-900/30">
-              {liveSwarmStats ? "WebSocket + WebRTC Joint Matrix Active" : "WebRTC DataChannels Active"}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto pr-2">
-            {/* 1. WebSocket Connected Peers */}
-            {liveSwarmStats?.peerPipelines?.map((p, idx) => (
-              <div key={`ws-peer-${idx}`} className="bg-indigo-950/20 p-2.5 rounded-xl border border-indigo-800/40 flex justify-between items-center text-[10px] font-mono">
-                <div className="flex flex-col gap-0.5 max-w-[124px]">
-                  <span className="text-slate-200 truncate font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping shrink-0" />
-                    {p.peerName || `Node ${p.id.substring(0, 5)}`}
-                  </span>
-                  <span className="text-slate-500 font-sans text-[8px]">Client Swarm Socket</span>
-                </div>
-                <div className="flex flex-col text-right shrink-0">
-                  <span className="text-indigo-400 font-bold">↓ {formatSpeed(p.downloadSpeed || 0)}</span>
-                  <span className="text-sky-400">↑ {formatSpeed(p.uploadSpeed || 0)}</span>
-                </div>
-              </div>
-            ))}
-
-            {/* 2. WebRTC DataChannel Peers */}
-            {activePeers.map((peer, ind) => (
-              <div key={`webrtc-peer-${ind}`} className="bg-[#0A0A0B]/60 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center text-[10px] font-mono">
-                <div className="flex flex-col gap-0.5 max-w-[120px]">
-                  <span className="text-slate-300 truncate font-semibold">Node {peer.id.substring(0, 6)}...</span>
-                  <span className="text-slate-500 font-sans text-[8px]">{peer.ip || "Direct Tunnel"}</span>
-                </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-slate-300">↓ {formatSize(peer.downloaded)}</span>
-                  <span className="text-indigo-400">↑ {formatSize(peer.uploaded)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Information strip for users on WebTorrent client capabilities */}
-      <div className="bg-[#161618] border border-slate-800 rounded-3xl p-4 flex items-start gap-3 w-full animate-fadeIn">
-        <Info className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-        <div className="text-slate-300 text-xs leading-relaxed">
-          <strong className="text-white block mb-0.5">True Serverless P2P Swarming</strong>
-          This movie tracks video bytes directly sourced from active browser clients visiting the system right now over secure WebSockets and WebRTC DataChannels. If speeds are fluctuating, please copy the magnet link and share with another player to multiply seed speeds!
-        </div>
-      </div>
     </div>
   );
 }
