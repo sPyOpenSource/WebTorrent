@@ -13,7 +13,7 @@ export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab, coll
     { id: "trending", name: "Trending", icon: Flame },
     { id: "live", name: "Go Live", icon: Radio },
     { id: "studio", name: "Seed Studio", icon: Sparkles },
-    { id: "streams", name: "P2P Diagnostics", icon: Activity },
+    { id: "streams", name: "Diagnostics", icon: Activity },
   ];
 
   return (
@@ -53,16 +53,16 @@ export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab, coll
           className="cursor-pointer w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-[11px] font-mono font-medium text-indigo-400 bg-indigo-950/20 border border-indigo-900/40 hover:border-indigo-700/50 hover:bg-indigo-950/30 transition text-left bento-transition"
         >
           <Magnet className="w-3.5 h-3.5 shrink-0" />
-          Stream Magnet URI
+          Magnet URI
         </button>
       </div>
 
       <div className="mt-auto px-4 py-4 text-[10px] text-slate-500 leading-relaxed font-sans">
         <div className="flex items-center gap-1.5 font-semibold text-slate-400 mb-1">
           <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
-          Node Running Live
+          Node Running
         </div>
-        WebRTC engine is warm and running in memory sandbox. Direct peer speeds depends on current swarm seeds.
+        WebRTC engine is warm and running in memory. Direct peer speeds depends on current swarm seeds.
       </div>
     </aside>
   );

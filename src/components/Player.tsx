@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VideoTorrent, TorrentStats } from "../types";
 import { swarmSocket, SwarmStats } from "../services/socket";
+import { loadWebTorrent, subscribeToLoader } from "../utils/webtorrentLoader";
 import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle, Maximize, Minimize } from "lucide-react";
 
 const DEFAULT_RTC_CONFIG = {
@@ -27,6 +28,8 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
   const [allFiles, setAllFiles] = useState<any[]>([]);
   const [webtorrentLoaded, setWebtorrentLoaded] = useState(false);
   const [activePeers, setActivePeers] = useState<any[]>([]);
+  const [loaderStatus, setLoaderStatus] = useState<string>("IDLE");
+  const [loaderUrl, setLoaderUrl] = useState<string>("");
 
   // Periodical stats tracker
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -74,20 +77,25 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     }
   };
 
-  // Check if WebTorrent exists on window
+  // Check if WebTorrent exists on window and subscribe to progressive dynamic loader
   useEffect(() => {
-    let checkCount = 0;
-    const checkSDK = () => {
-      if (typeof window !== "undefined" && (window as any).WebTorrent) {
+    // Initiate loader
+    loadWebTorrent();
+
+    const unsubscribe = subscribeToLoader((status, errorMsg, activeUrl) => {
+      setLoaderStatus(status);
+      if (activeUrl) setLoaderUrl(activeUrl);
+
+      if (status === "LOADED") {
         setWebtorrentLoaded(true);
-      } else if (checkCount < 10) {
-        checkCount++;
-        setTimeout(checkSDK, 500);
-      } else {
-        setErrorMsg("WebTorrent SDK could not be loaded from CDN. Please check your internet connection.");
+        setErrorMsg(null);
+      } else if (status === "FAILED") {
+        setWebtorrentLoaded(false);
+        setErrorMsg(errorMsg || "WebTorrent SDK could not be loaded from CDN. Please check your internet connection.");
       }
-    };
-    checkSDK();
+    });
+
+    return unsubscribe;
   }, []);
 
   // Dedicated Torrent Loader
@@ -557,21 +565,54 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         {errorMsg && (
           <div className="absolute inset-0 bg-[#0A0A0B]/95 flex flex-col items-center justify-center z-20 p-6 text-center text-white border border-rose-900/40">
             <ShieldAlert className="w-14 h-14 text-rose-500 mb-3" />
-            <h4 className="text-lg font-bold">BitTorrent Stream Obstruction</h4>
+            <h4 className="text-lg font-bold">
+              {errorMsg.includes("WebTorrent SDK") ? "WebTorrent SDK Failover State" : "BitTorrent Stream Obstruction"}
+            </h4>
             <p className="text-sm text-slate-400 mt-2 max-w-md">
               {errorMsg}
             </p>
-            <div className="mt-4 flex gap-3 text-xs">
-              <button 
-                onClick={() => {
-                  setLoading(true);
-                  setErrorMsg(null);
-                  window.location.reload();
-                }} 
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg font-medium transition"
-              >
-                Reload Swarm Engine
-              </button>
+            {errorMsg.includes("WebTorrent SDK") && (
+              <div className="mt-2 text-[11px] text-indigo-400 font-mono">
+                Active Source target: <span className="text-slate-300 break-all">{loaderUrl}</span>
+              </div>
+            )}
+            <div className="mt-5 flex flex-wrap justify-center gap-3 text-xs">
+              {errorMsg.includes("WebTorrent SDK") ? (
+                <>
+                  <button 
+                    onClick={() => {
+                      setLoading(true);
+                      setErrorMsg(null);
+                      loadWebTorrent(true); // Force load next CDN mirror
+                    }} 
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-semibold flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Load Backup CDN Mirror
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setLoading(true);
+                      setErrorMsg(null);
+                      window.location.reload();
+                    }} 
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg font-medium transition cursor-pointer"
+                  >
+                    Hard Refresh Page
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setLoading(true);
+                    setErrorMsg(null);
+                    window.location.reload();
+                  }} 
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg font-semibold transition cursor-pointer"
+                >
+                  Reload Swarm Engine
+                </button>
+              )}
             </div>
           </div>
         )}

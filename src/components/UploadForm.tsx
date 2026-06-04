@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { VideoTorrent } from "../types";
+import { loadWebTorrent } from "../utils/webtorrentLoader";
 import { Upload, FilePlay, Check, Copy, Share2, Sparkles, FolderHeart, Info, Film, ArrowRight, Cloud } from "lucide-react";
 import { CloudPickerModal } from "./CloudHub";
 
@@ -81,11 +82,17 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
     setIsSeeding(true);
 
     try {
-      if (typeof window === "undefined" || !(window as any).WebTorrent) {
-        throw new Error("WebTorrent SDK is currently loading or unreachable. Please refresh and try again.");
+      let WebTorrentClass = typeof window !== "undefined" ? (window as any).WebTorrent : null;
+      if (!WebTorrentClass) {
+        console.log("WebTorrent SDK not loaded on seed trigger. Initiating progressive retrieval...");
+        WebTorrentClass = await loadWebTorrent();
       }
 
-      const client = new (window as any).WebTorrent();
+      if (!WebTorrentClass) {
+        throw new Error("WebTorrent SDK could not be loaded from CDN mirrors. Please check your network and try again.");
+      }
+
+      const client = new WebTorrentClass();
       webtorrentClientRef.current = client;
 
       console.log("Seeding file:", selectedFile.name, selectedFile.size);

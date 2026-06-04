@@ -346,7 +346,7 @@ export default function App() {
               <h1 className="text-sm font-extrabold tracking-tight text-white leading-none">
                 Web<span className="text-indigo-400">Torrent</span>
               </h1>
-              <span className="text-[9px] font-mono text-slate-500 tracking-wider">SWARM MEDIA SWAPPERS</span>
+              <span className="text-[9px] font-mono text-slate-500 tracking-wider">SWARM MEDIA</span>
             </div>
           </div>
         </div>
@@ -360,7 +360,7 @@ export default function App() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search keywords or paste direct magnet:?xt=urn:btih:hash..."
+            placeholder="Search keywords"
             className="bg-transparent flex-1 px-4 py-2 text-xs md:text-sm text-slate-100 outline-none placeholder-slate-600 font-sans"
           />
           <button 
