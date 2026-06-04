@@ -20,6 +20,7 @@ interface PlayerProps {
 export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const forceFallbackRef = useRef<(() => void) | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,7 +92,8 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         setErrorMsg(null);
       } else if (status === "FAILED") {
         setWebtorrentLoaded(false);
-        setErrorMsg(errorMsg || "WebTorrent SDK could not be loaded from CDN. Please check your internet connection.");
+        // Do not fail blockingly; fallback gracefully to high-speed CDN webseed
+        console.warn(errorMsg || "WebTorrent SDK CDN loading failed. Running dynamic WebSeed HTML5 streaming.");
       }
     });
 
@@ -207,6 +209,10 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       }, 1000);
     };
 
+    forceFallbackRef.current = () => {
+      triggerHttpFallback();
+    };
+
     // Timeout of 2.2 seconds to failover if we are still loading or have 0 peers/metadata
     const fallbackTimeoutId = setTimeout(() => {
       if (!hasTorrentMetadataLoaded) {
@@ -266,6 +272,12 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         client.add(torrentId, {
           tracker: true,
         }, (torrent: any) => {
+          // Absolute guarantee: if fallback has already play-streamed the video, do not overwrite it!
+          if (fallbackTriggered) {
+            console.log("[Player] Torrent metadata loaded but fast HTTP fallback was already active. Bypassing override.");
+            return;
+          }
+
           hasTorrentMetadataLoaded = true;
           clearTimeout(fallbackTimeoutId);
           if (fallbackInterval) clearInterval(fallbackInterval);
@@ -298,13 +310,15 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             if (videoRef.current) {
               console.log("Rendering torrent stream to HTML5 element:", videoFile.name);
               
-              videoFile.renderTo(videoRef.current, {
+              // Dynamically support streamTo (v2.x) or renderTo (v1.x)
+              const renderMethod = videoFile.streamTo ? "streamTo" : "renderTo";
+              videoFile[renderMethod](videoRef.current, {
                 autoplay: true,
                 muted: false,
                 controls: true,
               }, (err: any, elem: HTMLVideoElement) => {
                 if (err) {
-                  console.error("WebTorrent renderTo error:", err);
+                  console.error(`WebTorrent ${renderMethod} error:`, err);
                   triggerHttpFallback();
                 }
                 setLoading(false);
@@ -353,10 +367,16 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         console.warn("client.add caught exception, triggering failover loading:", e);
         triggerHttpFallback();
       }
+    } else {
+      // If WebTorrent is not active or offline, transition to fallback instantly without waiting!
+      if (loaderStatus === "FAILED" || loaderStatus === "IDLE") {
+        triggerHttpFallback();
+      }
     }
 
     // Return Cleanup function that runs on unmounting or switching videos
     return () => {
+      forceFallbackRef.current = null;
       clearTimeout(fallbackTimeoutId);
       if (fallbackInterval) {
         clearInterval(fallbackInterval);
@@ -553,7 +573,8 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       videoRef.current.src = "";
       videoRef.current.load();
 
-      fileItem._original.renderTo(videoRef.current, {
+      const renderMethod = fileItem._original.streamTo ? "streamTo" : "renderTo";
+      fileItem._original[renderMethod](videoRef.current, {
         autoplay: true,
         muted: false,
         controls: true,
@@ -644,6 +665,17 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
               Locating seed nodes, parsing metadata blocks, and establishing zero-hop direct peer pipelines.
             </p>
+            <button
+              onClick={() => {
+                if (forceFallbackRef.current) {
+                  forceFallbackRef.current();
+                }
+              }}
+              className="mt-2 px-5 py-2.5 bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/30 hover:border-indigo-500 text-indigo-200 hover:text-white rounded-2xl text-xs font-bold font-sans cursor-pointer transition-all hover:scale-105 active:scale-95 shadow-md flex items-center gap-1.5 z-30"
+              id="skip-p2p-swarm-search-btn"
+            >
+              Skip Swarm Search &amp; Play Instantly (HTTP Fast WebSeed Bypass)
+            </button>
             
             {stats && (
               <div className="flex flex-col gap-2 mt-2 w-full max-w-xs font-mono text-xs text-indigo-400 bg-indigo-950/20 border border-indigo-900/30 p-3 rounded-xl">
