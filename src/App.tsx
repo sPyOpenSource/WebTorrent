@@ -219,7 +219,7 @@ export default function App() {
   const handleStreamCustomMagnet = (magnetUrl: string) => {
     let finalMagnet = magnetUrl;
     if (magnetUrl.length === 40) {
-      finalMagnet = `magnet:?xt=urn:btih:${magnetUrl}&dn=Imported+Swarm+Link&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com`;
+      finalMagnet = `magnet:?xt=urn:btih:${magnetUrl}&dn=Imported+Swarm+Link&tr=wss%3A%2F%2Ftracker.openwebtorrent.com`;
     }
 
     // Extract dn (Display Name) query query parameter to make it look professional!

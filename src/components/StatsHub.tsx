@@ -22,7 +22,7 @@ export default function StatsHub({ onStreamMagnet, seededVideos, onPlayVideo }: 
     if (trimmed.startsWith("magnet:?xt=urn:btih:") || trimmed.length === 40) {
       let finalMagnet = trimmed;
       if (trimmed.length === 40) {
-        finalMagnet = `magnet:?xt=urn:btih:${trimmed}&dn=Manually+Inputted+Hash&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com`;
+        finalMagnet = `magnet:?xt=urn:btih:${trimmed}&dn=Manually+Inputted+Hash&tr=wss%3A%2F%2Ftracker.openwebtorrent.com`;
       }
       onStreamMagnet(finalMagnet);
       setMagnetInput("");
@@ -145,7 +145,6 @@ export default function StatsHub({ onStreamMagnet, seededVideos, onPlayVideo }: 
           </p>
           <span className="text-[10px] text-slate-500 font-mono">Announced default signaling list:</span>
           <div className="flex flex-col gap-1 font-mono text-[10px] bg-[#0A0A0B]/50 p-2.5 rounded-xl border border-slate-800 text-slate-400">
-            <span>• wss://tracker.btorrent.xyz</span>
             <span>• wss://tracker.openwebtorrent.com</span>
             <span>• wss://tracker.fastcast.nz</span>
             <span>• wss://tracker.files.fm:7073</span>

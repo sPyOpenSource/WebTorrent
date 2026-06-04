@@ -101,7 +101,6 @@ export default function UploadForm({ onVideoCreated }: UploadFormProps) {
         name: selectedFile.name,
         comment: "Seeded live on WebTorrent",
         announce: [
-          "wss://tracker.btorrent.xyz",
           "wss://tracker.openwebtorrent.com",
           "wss://tracker.fastcast.nz",
           "udp://tracker.leechers-paradise.org:6969",
