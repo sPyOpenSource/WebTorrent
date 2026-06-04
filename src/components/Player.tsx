@@ -100,7 +100,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
   // Dedicated Torrent Loader
   useEffect(() => {
-    if (!webtorrentLoaded || !video) return;
+    if (!video) return;
     if (video.isLive) return; // bypass WebTorrent loader for live WebRTC
 
     // Reset Player states
@@ -125,15 +125,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     let fallbackInterval: NodeJS.Timeout | null = null;
     let hasTorrentMetadataLoaded = false;
     let client: any = null;
-
-    try {
-      client = new (window as any).WebTorrent();
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(`Failed to initialize WebTorrent engine: ${err.message || err}`);
-      setLoading(false);
-      return;
-    }
 
     const triggerHttpFallback = () => {
       if (fallbackTriggered || hasTorrentMetadataLoaded) return;
@@ -263,102 +254,105 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         clearInterval(localInterval);
         URL.revokeObjectURL(fileUrl);
         try {
-          client.destroy();
+          if (client) client.destroy();
         } catch(e){}
       };
     }
 
-    // Add torrent via WebTorrent Client
-    try {
-      client.add(torrentId, {
-        tracker: true,
-      }, (torrent: any) => {
-        hasTorrentMetadataLoaded = true;
-        clearTimeout(fallbackTimeoutId);
-        if (fallbackInterval) clearInterval(fallbackInterval);
+    // Add torrent via WebTorrent Client only if SDK has loaded successfully
+    if (webtorrentLoaded) {
+      try {
+        client = new (window as any).WebTorrent();
+        client.add(torrentId, {
+          tracker: true,
+        }, (torrent: any) => {
+          hasTorrentMetadataLoaded = true;
+          clearTimeout(fallbackTimeoutId);
+          if (fallbackInterval) clearInterval(fallbackInterval);
 
-        console.log("Torrent loaded! infoHash:", torrent.infoHash);
-        
-        // Store list of files
-        setAllFiles(torrent.files.map((f: any, idx: number) => ({
-          index: idx,
-          name: f.name,
-          size: f.length,
-          path: f.path,
-          extension: f.name.substring(f.name.lastIndexOf(".")).toLowerCase(),
-          _original: f
-        })));
-
-        // Search for the primary streamable video file
-        const streamableExtensions = [".mp4", ".webm", ".m4v", ".mkv", ".ogg"];
-        let videoFile = torrent.files.find((f: any) => {
-          const ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
-          return streamableExtensions.includes(ext) && !f.name.includes("sample");
-        });
-
-        // Fallback to any file ending with MP4 or mkv
-        if (!videoFile) videoFile = torrent.files[0];
-
-        if (videoFile) {
-          setPlayingFile(videoFile);
+          console.log("Torrent loaded! infoHash:", torrent.infoHash);
           
-          if (videoRef.current) {
-            console.log("Rendering torrent stream to HTML5 element:", videoFile.name);
+          // Store list of files
+          setAllFiles(torrent.files.map((f: any, idx: number) => ({
+            index: idx,
+            name: f.name,
+            size: f.length,
+            path: f.path,
+            extension: f.name.substring(f.name.lastIndexOf(".")).toLowerCase(),
+            _original: f
+          })));
+
+          // Search for the primary streamable video file
+          const streamableExtensions = [".mp4", ".webm", ".m4v", ".mkv", ".ogg"];
+          let videoFile = torrent.files.find((f: any) => {
+            const ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
+            return streamableExtensions.includes(ext) && !f.name.includes("sample");
+          });
+
+          // Fallback to any file ending with MP4 or mkv
+          if (!videoFile) videoFile = torrent.files[0];
+
+          if (videoFile) {
+            setPlayingFile(videoFile);
             
-            videoFile.renderTo(videoRef.current, {
-              autoplay: true,
-              muted: false,
-              controls: true,
-            }, (err: any, elem: HTMLVideoElement) => {
-              if (err) {
-                console.error("WebTorrent renderTo error:", err);
-                triggerHttpFallback();
-              }
-              setLoading(false);
-            });
-          }
-        } else {
-          triggerHttpFallback();
-        }
-
-        // Setup polling interval for real-time peer & byte transfer analytics
-        statsIntervalRef.current = setInterval(() => {
-          const computedStats: TorrentStats = {
-            infoHash: torrent.infoHash,
-            magnetUrl: torrent.magnetURI,
-            downloadSpeed: torrent.downloadSpeed,
-            uploadSpeed: torrent.uploadSpeed,
-            downloaded: torrent.downloaded,
-            uploaded: torrent.uploaded,
-            progress: torrent.progress,
-            peersCount: torrent.numPeers,
-            timeRemaining: torrent.timeRemaining,
-            ratio: torrent.ratio,
-            numPeers: torrent.numPeers
-          };
-          
-          setStats(computedStats);
-          if (onStatsUpdate) {
-            onStatsUpdate(computedStats);
+            if (videoRef.current) {
+              console.log("Rendering torrent stream to HTML5 element:", videoFile.name);
+              
+              videoFile.renderTo(videoRef.current, {
+                autoplay: true,
+                muted: false,
+                controls: true,
+              }, (err: any, elem: HTMLVideoElement) => {
+                if (err) {
+                  console.error("WebTorrent renderTo error:", err);
+                  triggerHttpFallback();
+                }
+                setLoading(false);
+              });
+            }
+          } else {
+            triggerHttpFallback();
           }
 
-          // Keep active peers details
-          if (torrent.wires && Array.isArray(torrent.wires)) {
-            setActivePeers(torrent.wires.map((wire: any) => ({
-              id: wire.peerId || "anonymous",
-              ip: wire.remoteAddress || "WebRTC Peer",
-              port: wire.remotePort || "Local",
-              downloaded: wire.downloaded || 0,
-              uploaded: wire.uploaded || 0,
-              choked: wire.peerChoking
-            })));
-          }
-        }, 500);
+          // Setup polling interval for real-time peer & byte transfer analytics
+          statsIntervalRef.current = setInterval(() => {
+            const computedStats: TorrentStats = {
+              infoHash: torrent.infoHash,
+              magnetUrl: torrent.magnetURI,
+              downloadSpeed: torrent.downloadSpeed,
+              uploadSpeed: torrent.uploadSpeed,
+              downloaded: torrent.downloaded,
+              uploaded: torrent.uploaded,
+              progress: torrent.progress,
+              peersCount: torrent.numPeers,
+              timeRemaining: torrent.timeRemaining,
+              ratio: torrent.ratio,
+              numPeers: torrent.numPeers
+            };
+            
+            setStats(computedStats);
+            if (onStatsUpdate) {
+              onStatsUpdate(computedStats);
+            }
 
-      });
-    } catch (e) {
-      console.warn("client.add caught exception, triggering failover loading:", e);
-      triggerHttpFallback();
+            // Keep active peers details
+            if (torrent.wires && Array.isArray(torrent.wires)) {
+              setActivePeers(torrent.wires.map((wire: any) => ({
+                id: wire.peerId || "anonymous",
+                ip: wire.remoteAddress || "WebRTC Peer",
+                port: wire.remotePort || "Local",
+                downloaded: wire.downloaded || 0,
+                uploaded: wire.uploaded || 0,
+                choked: wire.peerChoking
+              })));
+            }
+          }, 500);
+
+        });
+      } catch (e) {
+        console.warn("client.add caught exception, triggering failover loading:", e);
+        triggerHttpFallback();
+      }
     }
 
     // Return Cleanup function that runs on unmounting or switching videos
