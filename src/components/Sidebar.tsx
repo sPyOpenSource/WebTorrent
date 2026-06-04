@@ -12,7 +12,6 @@ export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab, coll
     { id: "feed", name: "Home", icon: Home },
     { id: "trending", name: "Trending", icon: Flame },
     { id: "live", name: "Go Live", icon: Radio },
-    { id: "studio", name: "Seed Studio", icon: Sparkles },
     { id: "streams", name: "Diagnostics", icon: Activity },
   ];
 
