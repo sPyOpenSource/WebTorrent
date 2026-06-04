@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { VideoTorrent, TorrentStats } from "../types";
-import { SwarmStats } from "../services/socket";
+import { swarmSocket, SwarmStats } from "../services/socket";
 import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle, Maximize, Minimize } from "lucide-react";
+
+const DEFAULT_RTC_CONFIG = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ]
+};
 
 interface PlayerProps {
   video: VideoTorrent;
@@ -86,6 +93,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
   // Dedicated Torrent Loader
   useEffect(() => {
     if (!webtorrentLoaded || !video) return;
+    if (video.isLive) return; // bypass WebTorrent loader for live WebRTC
 
     // Reset Player states
     setLoading(true);
@@ -271,6 +279,148 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       }
     };
   }, [webtorrentLoaded, video]);
+
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+
+  // Dedicated WebRTC Live Stream Loader
+  useEffect(() => {
+    if (!video || !video.isLive) {
+      if (videoRef.current && videoRef.current.srcObject) {
+        videoRef.current.srcObject = null;
+      }
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg(null);
+    setStats(null);
+    setPlayingFile(null);
+    setAllFiles([]);
+    setActivePeers([]);
+
+    console.log("[Player] Live WebRTC Stream joined. Broadcaster Id:", video.broadcasterId);
+
+    // Initialize RTCPeerConnection
+    const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIG);
+    peerConnectionRef.current = pc;
+
+    // Listen to incoming track
+    pc.ontrack = (event) => {
+      console.log("[Player] WebRTC live stream track received!");
+      if (videoRef.current) {
+        videoRef.current.srcObject = event.streams[0];
+        videoRef.current.play().catch(err => {
+          console.warn("[Player] Video play failed on track binding:", err);
+        });
+        setLoading(false);
+      }
+    };
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && video.broadcasterId) {
+        swarmSocket.send({
+          type: "rtc_signal",
+          target: video.broadcasterId,
+          signal: {
+            type: "candidate",
+            candidate: event.candidate
+          }
+        });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log("[Player] RTC Connection State:", pc.connectionState);
+      if (pc.connectionState === "connected") {
+        setLoading(false);
+      } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+        setErrorMsg("WebRTC stream connection lost. Broadcaster may have ceased transmitting or went off-air.");
+        setLoading(false);
+      }
+    };
+
+    // Listen for incoming answers/candidates from broadcaster (mediated via server.ts room signaling)
+    const unsubscribeSignal = swarmSocket.subscribe("rtc_signal_received", async (data) => {
+      // Check if signal belongs to this broadcaster
+      if (data.sender !== video.broadcasterId) return;
+
+      const { signal } = data;
+      if (!signal) return;
+
+      if (signal.type === "offer") {
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          // Return answer back to broadcaster
+          swarmSocket.send({
+            type: "rtc_signal",
+            target: video.broadcasterId!,
+            signal: {
+              type: "answer",
+              sdp: answer.sdp
+            }
+          });
+        } catch (err) {
+          console.error("WebRTC SDP Answer generation failed:", err);
+        }
+      } else if (signal.type === "candidate" && signal.candidate) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+        } catch (err) {
+          console.error("AddIceCandidate error on player:", err);
+        }
+      }
+    });
+
+    // Send a trigger that we have joined the stream room and are requesting the broadcast stream
+    const reqTimeout = setTimeout(() => {
+      if (video.broadcasterId) {
+        swarmSocket.send({
+          type: "rtc_signal",
+          target: video.broadcasterId,
+          signal: {
+            type: "request_stream"
+          }
+        });
+      }
+    }, 800);
+
+    // Provide placeholder fictitious live stats to show inside diagnostic boards!
+    const statsInterval = setInterval(() => {
+      const mockStats: TorrentStats = {
+        infoHash: `Livepeer-RTCMesh-${video.broadcasterId || "stream"}`,
+        magnetUrl: video.magnetUrl || "",
+        downloadSpeed: 250000,
+        uploadSpeed: 0,
+        downloaded: 0,
+        uploaded: 0,
+        progress: 1.0,
+        peersCount: liveSwarmStats ? liveSwarmStats.activePeersCount : 1,
+        timeRemaining: 0,
+        ratio: 1.0,
+        numPeers: liveSwarmStats ? liveSwarmStats.activePeersCount : 1
+      };
+      setStats(mockStats);
+      if (onStatsUpdate) onStatsUpdate(mockStats);
+    }, 1000);
+
+    return () => {
+      clearTimeout(reqTimeout);
+      clearInterval(statsInterval);
+      unsubscribeSignal();
+      if (peerConnectionRef.current) {
+        try {
+          peerConnectionRef.current.close();
+        } catch (e) {}
+        peerConnectionRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [video, webtorrentLoaded, liveSwarmStats]);
 
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {

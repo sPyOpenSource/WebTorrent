@@ -67,7 +67,12 @@ export default function VideoGrid({
                 />
                 
                 {/* Peer status badge or custom indicator floating relative on thumbnail */}
-                {video.isCustom ? (
+                {video.isLive ? (
+                  <span className="absolute top-3.5 left-3.5 bg-red-600 text-white text-[9px] uppercase font-extrabold px-2.5 py-1 rounded-full backdrop-blur-md border border-red-500/30 shadow flex items-center gap-1.5 animate-pulse">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                    Live Broadcast
+                  </span>
+                ) : video.isCustom ? (
                   <span className="absolute top-3.5 left-3.5 bg-indigo-600/90 text-white text-[9px] uppercase font-bold px-2.5 py-1 rounded-full backdrop-blur-md border border-indigo-500/30 shadow flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
                     Seeding Live
@@ -79,7 +84,9 @@ export default function VideoGrid({
                 )}
 
                 {/* Duration Badge */}
-                <span className="absolute bottom-3.5 right-3.5 bg-black/80 backdrop-blur-sm text-white text-[10px] font-mono font-medium px-1.5 py-0.5 rounded">
+                <span className={`absolute bottom-3.5 right-3.5 backdrop-blur-sm text-white text-[10px] font-mono font-medium px-1.5 py-0.5 rounded ${
+                  video.isLive ? "bg-red-700/90 uppercase tracking-widest text-[9px] font-bold" : "bg-black/80"
+                }`}>
                   {video.duration}
                 </span>
 

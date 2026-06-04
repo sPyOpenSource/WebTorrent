@@ -6,6 +6,7 @@ import VideoGrid from "./components/VideoGrid";
 import Player from "./components/Player";
 import UploadForm from "./components/UploadForm";
 import StatsHub from "./components/StatsHub";
+import LiveStudio from "./components/LiveStudio";
 import { CloudExporter } from "./components/CloudHub";
 import { swarmSocket, SwarmStats } from "./services/socket";
 import { 
@@ -108,6 +109,16 @@ export default function App() {
       }
     });
 
+    const unsubscribeUpdated = swarmSocket.subscribe("videos_updated", (data) => {
+      if (data && Array.isArray(data.videos)) {
+        setVideos(data.videos);
+        // Clear active player if current playing video is live and has been removed
+        if (selectedVideo && selectedVideo.isLive && !data.videos.some((v: any) => v.id === selectedVideo.id)) {
+          setSelectedVideo(null);
+        }
+      }
+    });
+
     const unsubscribeReset = swarmSocket.subscribe("videos_reset", (data) => {
       if (data && Array.isArray(data.videos)) {
         setVideos(data.videos);
@@ -119,6 +130,7 @@ export default function App() {
 
     return () => {
       unsubscribePub();
+      unsubscribeUpdated();
       unsubscribeReset();
     };
   }, []);
@@ -691,6 +703,16 @@ export default function App() {
             /* SEED PUBLISHER STUDIO */
             <div className="py-2">
               <UploadForm onVideoCreated={handleVideoCreated} />
+            </div>
+          ) : activeTab === "live" ? (
+            /* WEBRTC LIVE BROADCASTING STUDIO */
+            <div className="py-2">
+              <LiveStudio 
+                peerName={peerName}
+                onLiveStarted={(video) => {
+                  setVideos(prev => [video, ...prev]);
+                }}
+              />
             </div>
           ) : (
             /* ACTIVE STREAMS DIAGNOSTICS CONTROL */

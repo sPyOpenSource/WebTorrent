@@ -11,7 +11,7 @@ export interface VideoTorrent {
   id: string;
   title: string;
   description: string;
-  magnetUrl: string;
+  magnetUrl: string; // fallback or streaming placeholder for live streams
   category: string;
   uploader: string;
   uploaderAvatar?: string;
@@ -22,6 +22,8 @@ export interface VideoTorrent {
   comments: Comment[];
   isCustom?: boolean; // If seeded locally in this session
   localFile?: File;    // The actual local file being seeded
+  isLive?: boolean;    // Is this a live stream
+  broadcasterId?: string; // WebSocket connection peer ID of the broadcaster
 }
 
 export interface TorrentStats {

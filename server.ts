@@ -194,14 +194,15 @@ async function startServer() {
           case "publish_video": {
             const { video } = data;
             // Validate incoming video structure
-            if (video && video.title && video.magnetUrl) {
-              // Deduplicate video based on magnet block info hash
-              const existsOffset = serverVideos.findIndex(v => v.magnetUrl === video.magnetUrl);
+            if (video && video.title && (video.magnetUrl || video.isLive)) {
+              // Deduplicate video based on magnet block info hash or live stream id
+              const existsOffset = serverVideos.findIndex(v => v.id === video.id || (video.magnetUrl && v.magnetUrl === video.magnetUrl));
               const customVideo: VideoTorrent = {
                 ...video,
                 id: video.id || `video-${Date.now()}`,
                 comments: video.comments || [],
                 views: video.views || 1,
+                broadcasterId: video.isLive ? conn.peerId : undefined
               };
 
               if (existsOffset !== -1) {
@@ -218,6 +219,23 @@ async function startServer() {
                 video: customVideo,
                 videos: serverVideos
               });
+            }
+            break;
+          }
+
+          case "rtc_signal": {
+            const { target, signal } = data;
+            // route WebRTC signal packets to specific peer
+            for (const other of activeConnections) {
+              if (other.peerId === target && other.socket.readyState === WebSocket.OPEN) {
+                other.socket.send(JSON.stringify({
+                  type: "rtc_signal_received",
+                  sender: conn.peerId,
+                  senderName: conn.peerName,
+                  signal
+                }));
+                break;
+              }
             }
             break;
           }
@@ -283,6 +301,16 @@ async function startServer() {
     ws.on("close", () => {
       const oldRoomId = conn.videoId;
       activeConnections.delete(conn);
+      
+      // Auto-cleanup live streams broadcasted by this peer
+      const originalLen = serverVideos.length;
+      serverVideos = serverVideos.filter(v => !v.isLive || v.broadcasterId !== conn.peerId);
+      if (serverVideos.length !== originalLen) {
+        broadcastToAll({
+          type: "videos_updated",
+          videos: serverVideos
+        });
+      }
       
       if (oldRoomId) {
         broadcastToRoom(oldRoomId, {
