@@ -46,16 +46,7 @@ export default function Sidebar({ activeTab, onSelectTab, onEnterMagnetTab, coll
         })}
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-800 px-4">
-        <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Custom Import</h5>
-        <button
-          onClick={onEnterMagnetTab}
-          className="cursor-pointer w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-[11px] font-mono font-medium text-indigo-400 bg-indigo-950/20 border border-indigo-900/40 hover:border-indigo-700/50 hover:bg-indigo-950/30 transition text-left bento-transition"
-        >
-          <Magnet className="w-3.5 h-3.5 shrink-0" />
-          Magnet URI
-        </button>
-      </div>
+
 
       <div className="mt-auto px-4 py-4 text-[10px] text-slate-500 leading-relaxed font-sans">
         <div className="flex items-center gap-1.5 font-semibold text-slate-400 mb-1">
