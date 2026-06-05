@@ -425,11 +425,26 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     pc.ontrack = (event) => {
       console.log("[Player] WebRTC live stream track received!");
       if (videoRef.current) {
-        videoRef.current.srcObject = event.streams[0];
-        videoRef.current.play().catch(err => {
-          console.warn("[Player] Video play failed on track binding:", err);
-        });
+        const stream = event.streams[0];
+        if (videoRef.current.srcObject !== stream) {
+          videoRef.current.srcObject = stream;
+        }
         setLoading(false);
+        
+        // Force-load and play the received stream immediately
+        videoRef.current.play()
+          .then(() => {
+            console.log("[Player] WebRTC live stream started playing successfully.");
+          })
+          .catch(err => {
+            console.warn("[Player] Autoplay prevented on track binding. Retrying with mute...", err);
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(muteErr => {
+                console.error("[Player] Muted autoplay also failed for live track:", muteErr);
+              });
+            }
+          });
       }
     };
 
@@ -450,6 +465,22 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       console.log("[Player] RTC Connection State:", pc.connectionState);
       if (pc.connectionState === "connected") {
         setLoading(false);
+        // Force play immediately when connection becomes connected
+        if (videoRef.current) {
+          videoRef.current.play()
+            .then(() => {
+              console.log("[Player] WebRTC play started successfully on connection confirmation.");
+            })
+            .catch(err => {
+              console.warn("[Player] WebRTC play failed on connection. Retrying with muted fallback...", err);
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                videoRef.current.play().catch(muteErr => {
+                  console.error("[Player] Muted WebRTC play on connection confirmation failed:", muteErr);
+                });
+              }
+            });
+        }
       } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
         setErrorMsg("WebRTC stream connection lost. Broadcaster may have ceased transmitting or went off-air.");
         setLoading(false);
@@ -656,6 +687,25 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           className="w-full h-full object-contain focus:outline-none"
           controls
           playsInline
+          autoPlay
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              console.log("[Player] Video metadata loaded. Initiating auto-play sequences.");
+              videoRef.current.play()
+                .then(() => {
+                  console.log("[Player] Autoplay triggered successfully on metadata discovery.");
+                })
+                .catch(err => {
+                  console.warn("[Player] Unmuted playback blocked on metadata load. Escalating to muted autoplay.", err);
+                  if (videoRef.current) {
+                    videoRef.current.muted = true;
+                    videoRef.current.play().catch(muteErr => {
+                      console.error("[Player] Muted fallback autoplay also blocked:", muteErr);
+                    });
+                  }
+                });
+            }
+          }}
         />
 
         {/* Fullscreen API Toggle Button Overlay */}
