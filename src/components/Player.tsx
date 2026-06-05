@@ -467,6 +467,21 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       if (signal.type === "offer") {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(signal));
+          
+          // Process any queued candidates that arrived prior to remote offer description
+          const qc = (pc as any)._queuedCandidates;
+          if (qc && Array.isArray(qc)) {
+            console.log(`[Player] Processing ${qc.length} queued ICE candidates...`);
+            for (const candidate of qc) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              } catch (e) {
+                console.error("Delayed ICE candidate error:", e);
+              }
+            }
+            (pc as any)._queuedCandidates = [];
+          }
+
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
 
@@ -479,12 +494,21 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
               sdp: answer.sdp
             }
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error("WebRTC SDP Answer generation failed:", err);
+          setErrorMsg(`WebRTC SDP Answer generation failed: ${err?.message || err}`);
         }
       } else if (signal.type === "candidate" && signal.candidate) {
         try {
-          await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          if (pc.remoteDescription) {
+            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          } else {
+            if (!(pc as any)._queuedCandidates) {
+              (pc as any)._queuedCandidates = [];
+            }
+            (pc as any)._queuedCandidates.push(signal.candidate);
+            console.log("[Player] Queued candidate prior to setting remote description.");
+          }
         } catch (err) {
           console.error("AddIceCandidate error on player:", err);
         }

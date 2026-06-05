@@ -205,6 +205,20 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
         if (pc) {
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(signal));
+            
+            // Process any queued candidates that arrived before the answer description
+            const qc = (pc as any)._queuedCandidates;
+            if (qc && Array.isArray(qc)) {
+              console.log(`[Broadcaster] Processing ${qc.length} queued candidates for viewer:`, viewerId);
+              for (const candidate of qc) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                  console.error("Delayed Broadcaster ICE candidate error:", e);
+                }
+              }
+              (pc as any)._queuedCandidates = [];
+            }
           } catch (e) {
             console.error("SetRemoteDescription answer failed:", e);
           }
@@ -213,7 +227,15 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
         const pc = peerConnectionsRef.current.get(viewerId);
         if (pc && signal.candidate) {
           try {
-            await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            if (pc.remoteDescription) {
+              await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            } else {
+              if (!(pc as any)._queuedCandidates) {
+                (pc as any)._queuedCandidates = [];
+              }
+              (pc as any)._queuedCandidates.push(signal.candidate);
+              console.log(`[Broadcaster] Queued candidate for viewer ${viewerId} prior to setting remote description.`);
+            }
           } catch (e) {
             console.error("AddIceCandidate failed:", e);
           }
@@ -259,7 +281,14 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
   };
 
   const setupPeerConnectionForViewer = async (viewerId: string) => {
-    // If connection exists, clear it first
+    // If connection already exists and details are running, bypass duplicate setup to prevent renegotiation collision
+    const existingPC = peerConnectionsRef.current.get(viewerId);
+    if (existingPC && existingPC.connectionState !== "failed" && existingPC.connectionState !== "closed") {
+      console.log(`[LiveStudio] Connection for ${viewerId} is already running in state: ${existingPC.connectionState}. Skipping duplicate creation.`);
+      return;
+    }
+
+    // Clear failed/closed connections first
     cleanupPeerForViewer(viewerId);
 
     console.log("[LiveStudio] Initializing RTCPeerConnection for viewer:", viewerId);
