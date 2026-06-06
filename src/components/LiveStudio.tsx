@@ -199,7 +199,7 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
 
       // Viewer is requesting stream OR joining
       if (signal.type === "request_stream") {
-        setupPeerConnectionForViewer(viewerId);
+        setupPeerConnectionForViewer(viewerId, true);
       } else if (signal.type === "answer") {
         const pc = peerConnectionsRef.current.get(viewerId);
         if (pc) {
@@ -280,15 +280,15 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
     ];
   };
 
-  const setupPeerConnectionForViewer = async (viewerId: string) => {
+  const setupPeerConnectionForViewer = async (viewerId: string, forceReconnect = false) => {
     // If connection already exists and details are running, bypass duplicate setup to prevent renegotiation collision
     const existingPC = peerConnectionsRef.current.get(viewerId);
-    if (existingPC && existingPC.connectionState !== "failed" && existingPC.connectionState !== "closed") {
+    if (existingPC && !forceReconnect && existingPC.connectionState === "connected") {
       console.log(`[LiveStudio] Connection for ${viewerId} is already running in state: ${existingPC.connectionState}. Skipping duplicate creation.`);
       return;
     }
 
-    // Clear failed/closed connections first
+    // Clear previous connection if any
     cleanupPeerForViewer(viewerId);
 
     console.log("[LiveStudio] Initializing RTCPeerConnection for viewer:", viewerId);
