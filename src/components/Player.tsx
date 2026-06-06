@@ -411,7 +411,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         }
       }
     };
-  }, [webtorrentLoaded, video]);
+  }, [webtorrentLoaded, video?.id]);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
@@ -636,7 +636,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         videoRef.current.srcObject = null;
       }
     };
-  }, [video, webtorrentLoaded]);
+  }, [video?.id, webtorrentLoaded]);
 
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {
