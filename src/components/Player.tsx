@@ -434,44 +434,48 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     pc.ontrack = (event) => {
       console.log("[Player] WebRTC live stream track received:", event.track.kind);
       if (videoRef.current) {
-        // Collect all live tracks on our receivers
-        const activeTracks = pc.getReceivers()
-          .map(r => r.track)
-          .filter((t): t is MediaStreamTrack => !!t && t.readyState === "live");
-
-        console.log(`[Player] Rebuilding MediaStream with ${activeTracks.length} tracks:`, activeTracks.map(t => t.kind));
-
-        // Create a new stream and set srcObject to force browser playback refresh
-        const stream = new MediaStream(activeTracks);
+        let stream = videoRef.current.srcObject as MediaStream | null;
         
-        // Check if the current srcObject is already binding these tracks to prevent redundant reassignment
-        const currentSrcObject = videoRef.current.srcObject as MediaStream | null;
-        const currentTracks = currentSrcObject ? currentSrcObject.getTracks() : [];
-        const trackIds = activeTracks.map(t => t.id).sort().join(",");
-        const currentTrackIds = currentTracks.map(t => t.id).sort().join(",");
-
-        if (trackIds !== currentTrackIds || !currentSrcObject) {
-          console.log(`[Player] Binding rebuilt WebRTC stream. Tracks: ${activeTracks.map(t => t.kind).join(", ")}`);
+        // If we don't have a stream yet, initialize it
+        if (!stream) {
+          // Prefer the shared remote stream, otherwise create a new one
+          stream = event.streams[0] || new MediaStream();
           videoRef.current.srcObject = stream;
+          console.log("[Player] Initialized and bound MediaStream to video. Streams count:", event.streams.length);
+        }
+        
+        // Append the track to our existing stream if not present
+        if (stream instanceof MediaStream) {
+          const hasTrack = stream.getTracks().some(t => t.id === event.track.id);
+          if (!hasTrack) {
+            stream.addTrack(event.track);
+            console.log(`[Player] Added incoming ${event.track.kind} track to existing MediaStream.`);
+          }
         }
 
         setLoading(false);
-  //videoRef.current.addEventListener('loadedmetadata', () => {
-        videoRef.current.play()
-          .then(() => {
-            console.log("[Player] WebRTC live stream started playing successfully.");
-          })
-          .catch(err => {
-            console.warn("[Player] Autoplay prevented on track binding. Retrying with mute...", err);
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              setIsMuted(true);
-              videoRef.current.play().catch(muteErr => {
-                console.error("[Player] Muted autoplay also failed for live track:", muteErr);
-              });
-            }
-          });
-        //});
+        
+        // Only trigger play if we are paused to prevent interrupting active loads
+        if (videoRef.current.paused) {
+          // Set muted properties securely to ensure autoplay compliance
+          videoRef.current.muted = true;
+          setIsMuted(true);
+
+          videoRef.current.play()
+            .then(() => {
+              console.log("[Player] WebRTC live stream playing successfully (muted-for-autoplay).");
+            })
+            .catch(err => {
+              console.warn("[Player] Autoplay prevented on track binding even with muted=true flag. Retrying...", err);
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                setIsMuted(true);
+                videoRef.current.play().catch(muteErr => {
+                  console.error("[Player] WebRTC play completely blocked by browser policies:", muteErr);
+                });
+              }
+            });
+        }
       }
     };
 
