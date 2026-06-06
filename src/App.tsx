@@ -137,33 +137,34 @@ export default function App() {
 
   // Room Isolation and Stats binding React effects
   useEffect(() => {
-    if (!selectedVideo) {
+    const selectedVideoId = selectedVideo?.id;
+    if (!selectedVideoId) {
       swarmSocket.leaveRoom();
       setLiveSwarmStats(null);
       return;
     }
 
     // Join room with current selected identity coordinates
-    swarmSocket.joinRoom(selectedVideo.id, peerName);
+    swarmSocket.joinRoom(selectedVideoId, peerName);
 
     // Wire up events specific to this streaming theater room (Idempotent state logic)
     const unsubscribeAck = swarmSocket.subscribe("join_ack", (data) => {
       if (data && data.comments) {
-        setVideos(prev => prev.map(v => v.id === selectedVideo.id ? { ...v, comments: data.comments } : v));
-        setSelectedVideo(curr => curr?.id === selectedVideo.id ? { ...curr, comments: data.comments } : curr);
+        setVideos(prev => prev.map(v => v.id === selectedVideoId ? { ...v, comments: data.comments } : v));
+        setSelectedVideo(curr => curr?.id === selectedVideoId ? { ...curr, comments: data.comments } : curr);
       }
     });
 
     const unsubscribeComment = swarmSocket.subscribe("comment_received", (data) => {
-      if (data && data.videoId === selectedVideo.id) {
+      if (data && data.videoId === selectedVideoId) {
         // Idempotent update: Overwrite comments with server authoritative array
-        setVideos(prev => prev.map(v => v.id === selectedVideo.id ? { ...v, comments: data.allComments } : v));
-        setSelectedVideo(curr => curr?.id === selectedVideo.id ? { ...curr, comments: data.allComments } : curr);
+        setVideos(prev => prev.map(v => v.id === selectedVideoId ? { ...v, comments: data.allComments } : v));
+        setSelectedVideo(curr => curr?.id === selectedVideoId ? { ...curr, comments: data.allComments } : curr);
       }
     });
 
     const unsubscribeStats = swarmSocket.subscribe("room_stats_broadcast", (data) => {
-      if (data && data.videoId === selectedVideo.id) {
+      if (data && data.videoId === selectedVideoId) {
         setLiveSwarmStats(data);
       }
     });
@@ -173,7 +174,7 @@ export default function App() {
       unsubscribeComment();
       unsubscribeStats();
     };
-  }, [selectedVideo, peerName]);
+  }, [selectedVideo?.id, peerName]);
 
   // Transmit telemetry updates to Swarm server
   useEffect(() => {
