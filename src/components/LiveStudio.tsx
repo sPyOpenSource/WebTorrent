@@ -204,6 +204,10 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
         const pc = peerConnectionsRef.current.get(viewerId);
         if (pc) {
           try {
+            if (pc.signalingState !== "have-local-offer") {
+              console.log(`[Broadcaster] Received answer but signalingState is: ${pc.signalingState}. Skipping setRemoteDescription.`);
+              return;
+            }
             await pc.setRemoteDescription(new RTCSessionDescription(signal));
             
             // Process any queued candidates that arrived before the answer description
@@ -283,9 +287,15 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
   const setupPeerConnectionForViewer = async (viewerId: string, forceReconnect = false) => {
     // If connection already exists and details are running, bypass duplicate setup to prevent renegotiation collision
     const existingPC = peerConnectionsRef.current.get(viewerId);
-    if (existingPC && !forceReconnect && existingPC.connectionState === "connected") {
-      console.log(`[LiveStudio] Connection for ${viewerId} is already running in state: ${existingPC.connectionState}. Skipping duplicate creation.`);
-      return;
+    if (existingPC) {
+      const createdAt = (existingPC as any)._createdAt || 0;
+      const isVeryFresh = Date.now() - createdAt < 5000;
+      const isConnectingOrConnected = existingPC.connectionState === "connecting" || existingPC.connectionState === "connected";
+
+      if (isVeryFresh || (isConnectingOrConnected && !forceReconnect)) {
+        console.log(`[LiveStudio] Connection for ${viewerId} is fresh or connected (state: ${existingPC.connectionState}, signalingState: ${existingPC.signalingState}). Skipping duplicate creation.`);
+        return;
+      }
     }
 
     // Clear previous connection if any
@@ -293,6 +303,7 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
 
     console.log("[LiveStudio] Initializing RTCPeerConnection for viewer:", viewerId);
     const pc = new RTCPeerConnection(DEFAULT_RTC_CONFIG);
+    (pc as any)._createdAt = Date.now();
     peerConnectionsRef.current.set(viewerId, pc);
 
     // Feed local track buffers to peer connection
