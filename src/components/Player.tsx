@@ -432,24 +432,35 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
     // Listen to incoming track
     pc.ontrack = (event) => {
-      console.log("[Player] WebRTC live stream track received:", event.track.kind, "Stream tracks:", event.streams[0]?.getTracks().map(t => t.kind));
+      console.log("[Player] WebRTC live stream track received:", event.track.kind);
       if (videoRef.current) {
-        const stream = event.streams[0] || new MediaStream([event.track]);
+        // Collect all live tracks on our receivers
+        const activeTracks = pc.getReceivers()
+          .map(r => r.track)
+          .filter((t): t is MediaStreamTrack => !!t && t.readyState === "live");
+
+        console.log(`[Player] Rebuilding MediaStream with ${activeTracks.length} tracks:`, activeTracks.map(t => t.kind));
+
+        // Create a new stream and set srcObject to force browser playback refresh
+        const stream = new MediaStream(activeTracks);
         
-        // If the current video element source is not this stream, or if the current source doesn't have a video track
-        // but the incoming stream does (resolves the audio-first race condition), re-bind the srcObject.
+        // Check if the current srcObject is already binding these tracks to prevent redundant reassignment
         const currentSrcObject = videoRef.current.srcObject as MediaStream | null;
-        const currentHasVideo = currentSrcObject ? currentSrcObject.getVideoTracks().length > 0 : false;
-        const incomingHasVideo = stream.getVideoTracks().length > 0;
-        
-        if (currentSrcObject !== stream || (incomingHasVideo && !currentHasVideo)) {
-          console.log(`[Player] Binding stream. Video track present: ${incomingHasVideo}`);
+        const currentTracks = currentSrcObject ? currentSrcObject.getTracks() : [];
+        const trackIds = activeTracks.map(t => t.id).sort().join(",");
+        const currentTrackIds = currentTracks.map(t => t.id).sort().join(",");
+
+        if (trackIds !== currentTrackIds || !currentSrcObject) {
+          console.log(`[Player] Binding rebuilt WebRTC stream. Tracks: ${activeTracks.map(t => t.kind).join(", ")}`);
           videoRef.current.srcObject = stream;
         }
 
         setLoading(false);
         
-        // Force-load and play the received stream immediately
+        // Force synchronous DOM property configuration before play() to bypass Autoplay Block
+        videoRef.current.muted = true;
+        setIsMuted(true);
+
         videoRef.current.play()
           .then(() => {
             console.log("[Player] WebRTC live stream started playing successfully.");
@@ -485,20 +496,15 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       if (pc.connectionState === "connected") {
         setLoading(false);
         // Force play immediately when connection becomes connected
-        if (videoRef.current) {
+        if (videoRef.current && videoRef.current.paused) {
+          videoRef.current.muted = true;
+          setIsMuted(true);
           videoRef.current.play()
             .then(() => {
               console.log("[Player] WebRTC play started successfully on connection confirmation.");
             })
             .catch(err => {
-              console.warn("[Player] WebRTC play failed on connection. Retrying with muted fallback...", err);
-              if (videoRef.current) {
-                videoRef.current.muted = true;
-                setIsMuted(true);
-                videoRef.current.play().catch(muteErr => {
-                  console.error("[Player] Muted WebRTC play on connection confirmation failed:", muteErr);
-                });
-              }
+              console.warn("[Player] WebRTC play on connection confirmation failed:", err);
             });
         }
       } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
