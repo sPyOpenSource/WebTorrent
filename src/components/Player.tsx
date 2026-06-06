@@ -106,7 +106,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     if (video.isLive) return; // bypass WebTorrent loader for live WebRTC
 
     // Reset Player states
-    setLoading(true);
+    //setLoading(true);
     setErrorMsg(null);
     setStats(null);
     setPlayingFile(null);
@@ -408,7 +408,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
       return;
     }
 
-    setLoading(true);
+    //setLoading(true);
     setErrorMsg(null);
     setStats(null);
     setPlayingFile(null);
@@ -603,7 +603,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {
     if (!videoRef.current) return;
-    setLoading(true);
+    //setLoading(true);
     setErrorMsg(null);
     setPlayingFile(fileItem._original || fileItem);
 
