@@ -117,7 +117,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     }
 
     const FALLBACK_HTTP_SOURCES: Record<string, string> = {
-      sintel: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+      "sintel": "http://www.peach.themazzone.com/durian/movies/sintel-1024-surround.mp4",
       "big-buck-bunny": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
       "tears-of-steel": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
       "cosmos-laundromat": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
@@ -423,12 +423,18 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
     // Listen to incoming track
     pc.ontrack = (event) => {
-      console.log("[Player] WebRTC live stream track received!");
+      console.log("[Player] WebRTC live stream track received:", event.track.kind);
       if (videoRef.current) {
-        const stream = event.streams[0];
-        if (videoRef.current.srcObject !== stream) {
-          videoRef.current.srcObject = stream;
-        }
+        // Dynamically extract all live tracks from all peer connection receivers
+        const activeTracks = pc.getReceivers()
+          .map(r => r.track)
+          .filter((t): t is MediaStreamTrack => !!t && t.readyState === "live");
+
+        console.log(`[Player] Rebuilding MediaStream with ${activeTracks.length} tracks:`, activeTracks.map(t => t.kind));
+        
+        // Create a new stream and set srcObject to force browser playback refresh
+        const stream = new MediaStream(activeTracks);
+        videoRef.current.srcObject = stream;
         setLoading(false);
         
         // Force-load and play the received stream immediately
