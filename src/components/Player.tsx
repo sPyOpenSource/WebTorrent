@@ -636,7 +636,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         videoRef.current.srcObject = null;
       }
     };
-  }, [video?.id, webtorrentLoaded]);
+  }, [video?.id]);
 
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {
