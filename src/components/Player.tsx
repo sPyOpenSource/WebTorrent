@@ -430,7 +430,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     setPlayingFile(null);
     setAllFiles([]);
     setActivePeers([]);
-
+    if(peerConnectionRef.current) return;
     console.log("[Player] Live WebRTC Stream joined. Broadcaster Id:", video.broadcasterId);
 
     // Initialize RTCPeerConnection
@@ -513,8 +513,8 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         setLoading(false);
         // Force play immediately when connection becomes connected
         if (videoRef.current && videoRef.current.paused) {
-          //videoRef.current.muted = true;
-          //setIsMuted(true);
+          videoRef.current.muted = true;
+          setIsMuted(true);
           videoRef.current.play()
             .then(() => {
               console.log("[Player] WebRTC play started successfully on connection confirmation.");
