@@ -735,27 +735,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           }}
         />
 
-        {/* Fullscreen API Toggle Button Overlay */}
-        {!loading && !errorMsg && (
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-4 left-4 z-25 bg-[#161618]/90 hover:bg-[#202024] backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs text-white shadow-lg cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 opacity-90 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 group/btn"
-            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
-                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
-                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Fullscreen</span>
-              </>
-            )}
-          </button>
-        )}
-
         {/* Loading / WebRTC Connecting State */}
         {loading && (
           <div className="absolute inset-0 bg-[#0A0A0B]/95 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-6 text-center">
