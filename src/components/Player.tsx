@@ -37,10 +37,12 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(video?.isLive || false);
+  const [playBlocked, setPlayBlocked] = useState(false);
 
   // Sync muted states on video swap
   useEffect(() => {
     setIsMuted(video?.isLive || false);
+    setPlayBlocked(false);
     if (videoRef.current) {
       videoRef.current.muted = video?.isLive || false;
     }
@@ -464,15 +466,23 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           videoRef.current.play()
             .then(() => {
               console.log("[Player] WebRTC live stream playing successfully (muted-for-autoplay).");
+              setPlayBlocked(false);
             })
             .catch(err => {
               console.warn("[Player] Autoplay prevented on track binding even with muted=true flag. Retrying...", err);
               if (videoRef.current) {
                 videoRef.current.muted = true;
                 setIsMuted(true);
-                videoRef.current.play().catch(muteErr => {
-                  console.error("[Player] WebRTC play completely blocked by browser policies:", muteErr);
-                });
+                videoRef.current.play()
+                  .then(() => {
+                    setPlayBlocked(false);
+                  })
+                  .catch(muteErr => {
+                    console.error("[Player] WebRTC play completely blocked by browser policies:", muteErr);
+                    setPlayBlocked(true);
+                  });
+              } else {
+                setPlayBlocked(true);
               }
             });
         }
@@ -503,9 +513,11 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           videoRef.current.play()
             .then(() => {
               console.log("[Player] WebRTC play started successfully on connection confirmation.");
+              setPlayBlocked(false);
             })
             .catch(err => {
               console.warn("[Player] WebRTC play on connection confirmation failed:", err);
+              setPlayBlocked(true);
             });
         }
       } else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
@@ -728,15 +740,23 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
               videoRef.current.play()
                 .then(() => {
                   console.log("[Player] Autoplay triggered successfully on metadata discovery.");
+                  setPlayBlocked(false);
                 })
                 .catch(err => {
                   console.warn("[Player] Unmuted playback blocked on metadata load. Escalating to muted autoplay.", err);
                   if (videoRef.current) {
                     videoRef.current.muted = true;
                     setIsMuted(true);
-                    videoRef.current.play().catch(muteErr => {
-                      console.error("[Player] Muted fallback autoplay also blocked:", muteErr);
-                    });
+                    videoRef.current.play()
+                      .then(() => {
+                        setPlayBlocked(false);
+                      })
+                      .catch(muteErr => {
+                        console.error("[Player] Muted fallback autoplay also blocked:", muteErr);
+                        setPlayBlocked(true);
+                      });
+                  } else {
+                    setPlayBlocked(true);
                   }
                 });
             }
@@ -748,10 +768,12 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           onPlay={() => {
             console.log("[Player] Video play event fired. Resetting loading state to false.");
             setLoading(false);
+            setPlayBlocked(false);
           }}
           onPlaying={() => {
             console.log("[Player] Video playing event fired. Resetting loading state to false.");
             setLoading(false);
+            setPlayBlocked(false);
           }}
           onTimeUpdate={() => {
             if (videoRef.current && videoRef.current.currentTime > 0) {
@@ -761,7 +783,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         />
 
         {/* Dynamic Float Pill Overlay: Tap to Unmute Stream */}
-        {isMuted && !loading && !errorMsg && (
+        {isMuted && !loading && !errorMsg && !playBlocked && (
           <button
             onClick={() => {
               if (videoRef.current) {
@@ -778,6 +800,54 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             <VolumeX className="w-4 h-4 animate-pulse text-indigo-200" />
             <span>Tap to Unmute Stream</span>
           </button>
+        )}
+
+        {/* Autoplay Blocked Intercept Overlay */}
+        {playBlocked && !loading && !errorMsg && (
+          <div className="absolute inset-0 bg-[#0A0A0B]/85 backdrop-blur-sm flex flex-col items-center justify-center z-30 p-6 text-center" id="player-autoplay-blocked-overlay">
+            <div className="bg-[#161618] border border-slate-800 p-6 rounded-3xl max-w-sm shadow-2xl flex flex-col items-center transition-all scale-100 hover:scale-[1.01]">
+              <div className="w-12 h-12 rounded-full bg-indigo-600/10 flex items-center justify-center border border-indigo-500/20 mb-3 text-indigo-400">
+                <Play className="w-6 h-6 animate-pulse" fill="currentColor" />
+              </div>
+              <h4 className="text-sm font-bold text-white mb-1.5 font-sans">
+                Autoplay Prevented
+              </h4>
+              <p className="text-xs text-slate-400 mb-4 font-sans leading-relaxed">
+                Your web browser is blocking automatic media playback. Securely tap the action button below to tune in live.
+              </p>
+              <button
+                onClick={() => {
+                  if (videoRef.current) {
+                    // Try unmuted play first as they explicitly clicked/gestured
+                    videoRef.current.muted = false;
+                    setIsMuted(false);
+                    videoRef.current.play()
+                      .then(() => {
+                        setPlayBlocked(false);
+                      })
+                      .catch(err => {
+                        console.warn("Unmuted play on user click blocked. Fallback in-situ with mute.", err);
+                        if (videoRef.current) {
+                          videoRef.current.muted = true;
+                          setIsMuted(true);
+                          videoRef.current.play()
+                            .then(() => {
+                              setPlayBlocked(false);
+                            })
+                            .catch(muteErr => {
+                              console.error("Fatal: Browser blocked muted play even on user click.", muteErr);
+                            });
+                        }
+                      });
+                  }
+                }}
+                className="w-full py-2 px-4 bg-[#2D2AF5] hover:bg-[#1E1BD0] active:scale-95 text-white font-sans font-semibold text-xs rounded-xl shadow-lg border border-indigo-500/10 cursor-pointer transition-all hover:scale-102 flex items-center justify-center gap-1.5"
+                id="player-autoplay-unblock-trigger-btn"
+              >
+                <span>Play Live Broadcast</span>
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Fullscreen API Toggle Button Overlay */}
