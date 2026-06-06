@@ -430,7 +430,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
     setPlayingFile(null);
     setAllFiles([]);
     setActivePeers([]);
-    if(peerConnectionRef.current) return;
+
     console.log("[Player] Live WebRTC Stream joined. Broadcaster Id:", video.broadcasterId);
 
     // Initialize RTCPeerConnection
@@ -462,35 +462,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
         setLoading(false);
         
-        // Only trigger play if we are paused to prevent interrupting active loads
-        /*if (videoRef.current.paused) {
-          // Set muted properties securely to ensure autoplay compliance
-          videoRef.current.muted = true;
-          setIsMuted(true);
-
-          videoRef.current.play()
-            .then(() => {
-              console.log("[Player] WebRTC live stream playing successfully (muted-for-autoplay).");
-              setPlayBlocked(false);
-            })
-            .catch(err => {
-              console.warn("[Player] Autoplay prevented on track binding even with muted=true flag. Retrying...", err);
-              if (videoRef.current) {
-                videoRef.current.muted = true;
-                setIsMuted(true);
-                videoRef.current.play()
-                  .then(() => {
-                    setPlayBlocked(false);
-                  })
-                  .catch(muteErr => {
-                    console.error("[Player] WebRTC play completely blocked by browser policies:", muteErr);
-                    setPlayBlocked(true);
-                  });
-              } else {
-                setPlayBlocked(true);
-              }
-            });
-        }*/
       }
     };
 
@@ -786,95 +757,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             }
           }}
         />
-
-        {/* Dynamic Float Pill Overlay: Tap to Unmute Stream */}
-        {isMuted && !loading && !errorMsg && !playBlocked && (
-          <button
-            onClick={() => {
-              if (videoRef.current) {
-                videoRef.current.muted = false;
-                setIsMuted(false);
-                videoRef.current.play().catch(err => {
-                  console.error("Failed to play after unmute:", err);
-                });
-              }
-            }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#2D2AF5] hover:bg-[#1E1BD0] active:scale-95 text-white font-sans font-semibold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-indigo-400/30 flex items-center gap-1.5 cursor-pointer backdrop-blur-md transition-all hover:scale-105"
-            id="player-unmute-overlay-button"
-          >
-            <VolumeX className="w-4 h-4 animate-pulse text-indigo-200" />
-            <span>Tap to Unmute Stream</span>
-          </button>
-        )}
-
-        {/* Autoplay Blocked Intercept Overlay */}
-        {playBlocked && !loading && !errorMsg && (
-          <div className="absolute inset-0 bg-[#0A0A0B]/85 backdrop-blur-sm flex flex-col items-center justify-center z-30 p-6 text-center" id="player-autoplay-blocked-overlay">
-            <div className="bg-[#161618] border border-slate-800 p-6 rounded-3xl max-w-sm shadow-2xl flex flex-col items-center transition-all scale-100 hover:scale-[1.01]">
-              <div className="w-12 h-12 rounded-full bg-indigo-600/10 flex items-center justify-center border border-indigo-500/20 mb-3 text-indigo-400">
-                <Play className="w-6 h-6 animate-pulse" fill="currentColor" />
-              </div>
-              <h4 className="text-sm font-bold text-white mb-1.5 font-sans">
-                Autoplay Prevented
-              </h4>
-              <p className="text-xs text-slate-400 mb-4 font-sans leading-relaxed">
-                Your web browser is blocking automatic media playback. Securely tap the action button below to tune in live.
-              </p>
-              <button
-                onClick={() => {
-                  if (videoRef.current) {
-                    // Try unmuted play first as they explicitly clicked/gestured
-                    videoRef.current.muted = false;
-                    setIsMuted(false);
-                    videoRef.current.play()
-                      .then(() => {
-                        setPlayBlocked(false);
-                      })
-                      .catch(err => {
-                        console.warn("Unmuted play on user click blocked. Fallback in-situ with mute.", err);
-                        if (videoRef.current) {
-                          videoRef.current.muted = true;
-                          setIsMuted(true);
-                          videoRef.current.play()
-                            .then(() => {
-                              setPlayBlocked(false);
-                            })
-                            .catch(muteErr => {
-                              console.error("Fatal: Browser blocked muted play even on user click.", muteErr);
-                            });
-                        }
-                      });
-                  }
-                }}
-                className="w-full py-2 px-4 bg-[#2D2AF5] hover:bg-[#1E1BD0] active:scale-95 text-white font-sans font-semibold text-xs rounded-xl shadow-lg border border-indigo-500/10 cursor-pointer transition-all hover:scale-102 flex items-center justify-center gap-1.5"
-                id="player-autoplay-unblock-trigger-btn"
-              >
-                <span>Play Live Broadcast</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Fullscreen API Toggle Button Overlay */}
-        {!loading && !errorMsg && (
-          <button
-            onClick={toggleFullscreen}
-            className="absolute top-4 left-4 z-25 bg-[#161618]/90 hover:bg-[#202024] backdrop-blur-md border border-slate-800 rounded-xl px-3 py-2 text-xs text-white shadow-lg cursor-pointer transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 opacity-90 md:opacity-0 md:group-hover:opacity-100 hover:opacity-100 group/btn"
-            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-          >
-            {isFullscreen ? (
-              <>
-                <Minimize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
-                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Exit Fullscreen</span>
-              </>
-            ) : (
-              <>
-                <Maximize className="w-3.5 h-3.5 text-indigo-400 group-hover/btn:text-white transition" />
-                <span className="font-sans font-semibold text-[11px] text-slate-355 group-hover/btn:text-white transition">Fullscreen</span>
-              </>
-            )}
-          </button>
-        )}
 
         {/* Loading / WebRTC Connecting State */}
         {loading && (
