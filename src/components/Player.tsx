@@ -609,7 +609,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
 
     if (fileItem.isFallback) {
       const FALLBACK_HTTP_SOURCES: Record<string, string> = {
-        sintel: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        "sintel": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
         "big-buck-bunny": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
         "tears-of-steel": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
         "cosmos-laundromat": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
