@@ -199,7 +199,7 @@ export default function LiveStudio({ peerName, onLiveStarted }: LiveStudioProps)
 
       // Viewer is requesting stream OR joining
       if (signal.type === "request_stream") {
-        setupPeerConnectionForViewer(viewerId, true);
+        setupPeerConnectionForViewer(viewerId, false);
       } else if (signal.type === "answer") {
         const pc = peerConnectionsRef.current.get(viewerId);
         if (pc) {
