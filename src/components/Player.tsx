@@ -697,6 +697,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           onLoadedMetadata={() => {
             if (videoRef.current) {
               console.log("[Player] Video metadata loaded. Initiating auto-play sequences.");
+              setLoading(false);
               videoRef.current.play()
                 .then(() => {
                   console.log("[Player] Autoplay triggered successfully on metadata discovery.");
@@ -710,6 +711,23 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
                     });
                   }
                 });
+            }
+          }}
+          onCanPlay={() => {
+            console.log("[Player] Video canplay event fired. Resetting loading state to false.");
+            setLoading(false);
+          }}
+          onPlay={() => {
+            console.log("[Player] Video play event fired. Resetting loading state to false.");
+            setLoading(false);
+          }}
+          onPlaying={() => {
+            console.log("[Player] Video playing event fired. Resetting loading state to false.");
+            setLoading(false);
+          }}
+          onTimeUpdate={() => {
+            if (videoRef.current && videoRef.current.currentTime > 0) {
+              setLoading(false);
             }
           }}
         />
