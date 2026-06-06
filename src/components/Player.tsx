@@ -35,6 +35,11 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
   // Periodical stats tracker
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const liveSwarmStatsRef = useRef(liveSwarmStats);
+  useEffect(() => {
+    liveSwarmStatsRef.current = liveSwarmStats;
+  }, [liveSwarmStats]);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMuted, setIsMuted] = useState(video?.isLive || false);
   const [playBlocked, setPlayBlocked] = useState(false);
@@ -608,10 +613,10 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         downloaded: 0,
         uploaded: 0,
         progress: 1.0,
-        peersCount: liveSwarmStats ? liveSwarmStats.activePeersCount : 1,
+        peersCount: liveSwarmStatsRef.current ? liveSwarmStatsRef.current.activePeersCount : 1,
         timeRemaining: 0,
         ratio: 1.0,
-        numPeers: liveSwarmStats ? liveSwarmStats.activePeersCount : 1
+        numPeers: liveSwarmStatsRef.current ? liveSwarmStatsRef.current.activePeersCount : 1
       };
       setStats(mockStats);
       if (onStatsUpdate) onStatsUpdate(mockStats);
@@ -625,13 +630,13 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         try {
           peerConnectionRef.current.close();
         } catch (e) {}
-        peerConnectionRef.current = null;
+          peerConnectionRef.current = null;
       }
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
     };
-  }, [video, webtorrentLoaded, liveSwarmStats]);
+  }, [video, webtorrentLoaded]);
 
   // Manually select and play a different file inside multi-file torrents
   const selectFile = (fileItem: any) => {
