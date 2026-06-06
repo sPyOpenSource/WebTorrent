@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { VideoTorrent, TorrentStats } from "../types";
 import { swarmSocket, SwarmStats } from "../services/socket";
 import { loadWebTorrent, subscribeToLoader } from "../utils/webtorrentLoader";
-import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle, Maximize, Minimize } from "lucide-react";
+import { Play, Pause, RefreshCw, Users, ShieldAlert, CheckCircle2, FileVideo, DownloadCloud, UploadCloud, Info, AlertTriangle, Maximize, Minimize, Volume2, VolumeX } from "lucide-react";
 
 const DEFAULT_RTC_CONFIG = {
   iceServers: [
@@ -36,6 +36,15 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMuted, setIsMuted] = useState(video?.isLive || false);
+
+  // Sync muted states on video swap
+  useEffect(() => {
+    setIsMuted(video?.isLive || false);
+    if (videoRef.current) {
+      videoRef.current.muted = video?.isLive || false;
+    }
+  }, [video?.id]);
 
   // Synchronize HTML5 Fullscreen state
   useEffect(() => {
@@ -449,6 +458,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             console.warn("[Player] Autoplay prevented on track binding. Retrying with mute...", err);
             if (videoRef.current) {
               videoRef.current.muted = true;
+              setIsMuted(true);
               videoRef.current.play().catch(muteErr => {
                 console.error("[Player] Muted autoplay also failed for live track:", muteErr);
               });
@@ -484,6 +494,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
               console.warn("[Player] WebRTC play failed on connection. Retrying with muted fallback...", err);
               if (videoRef.current) {
                 videoRef.current.muted = true;
+                setIsMuted(true);
                 videoRef.current.play().catch(muteErr => {
                   console.error("[Player] Muted WebRTC play on connection confirmation failed:", muteErr);
                 });
@@ -697,6 +708,12 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           controls
           playsInline
           autoPlay
+          muted={isMuted}
+          onVolumeChange={() => {
+            if (videoRef.current) {
+              setIsMuted(videoRef.current.muted || videoRef.current.volume === 0);
+            }
+          }}
           onLoadedMetadata={() => {
             if (videoRef.current) {
               console.log("[Player] Video metadata loaded. Initiating auto-play sequences.");
@@ -709,6 +726,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
                   console.warn("[Player] Unmuted playback blocked on metadata load. Escalating to muted autoplay.", err);
                   if (videoRef.current) {
                     videoRef.current.muted = true;
+                    setIsMuted(true);
                     videoRef.current.play().catch(muteErr => {
                       console.error("[Player] Muted fallback autoplay also blocked:", muteErr);
                     });
@@ -734,6 +752,26 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
             }
           }}
         />
+
+        {/* Dynamic Float Pill Overlay: Tap to Unmute Stream */}
+        {isMuted && !loading && !errorMsg && (
+          <button
+            onClick={() => {
+              if (videoRef.current) {
+                videoRef.current.muted = false;
+                setIsMuted(false);
+                videoRef.current.play().catch(err => {
+                  console.error("Failed to play after unmute:", err);
+                });
+              }
+            }}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#2D2AF5] hover:bg-[#1E1BD0] active:scale-95 text-white font-sans font-semibold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-indigo-400/30 flex items-center gap-1.5 cursor-pointer backdrop-blur-md transition-all hover:scale-105"
+            id="player-unmute-overlay-button"
+          >
+            <VolumeX className="w-4 h-4 animate-pulse text-indigo-200" />
+            <span>Tap to Unmute Stream</span>
+          </button>
+        )}
 
         {/* Loading / WebRTC Connecting State */}
         {loading && (
