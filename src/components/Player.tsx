@@ -456,11 +456,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         }
 
         setLoading(false);
-        
-        // Force synchronous DOM property configuration before play() to bypass Autoplay Block
-        videoRef.current.muted = true;
-        setIsMuted(true);
-
+  //videoRef.current.addEventListener('loadedmetadata', () => {
         videoRef.current.play()
           .then(() => {
             console.log("[Player] WebRTC live stream started playing successfully.");
@@ -475,6 +471,7 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
               });
             }
           });
+        //});
       }
     };
 
@@ -497,8 +494,8 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
         setLoading(false);
         // Force play immediately when connection becomes connected
         if (videoRef.current && videoRef.current.paused) {
-          videoRef.current.muted = true;
-          setIsMuted(true);
+          //videoRef.current.muted = true;
+          //setIsMuted(true);
           videoRef.current.play()
             .then(() => {
               console.log("[Player] WebRTC play started successfully on connection confirmation.");
