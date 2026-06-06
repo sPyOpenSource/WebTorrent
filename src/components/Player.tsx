@@ -753,26 +753,6 @@ export default function Player({ video, onStatsUpdate, liveSwarmStats }: PlayerP
           }}
         />
 
-        {/* Dynamic Float Pill Overlay: Tap to Unmute Stream */}
-        {isMuted && !loading && !errorMsg && (
-          <button
-            onClick={() => {
-              if (videoRef.current) {
-                videoRef.current.muted = false;
-                setIsMuted(false);
-                videoRef.current.play().catch(err => {
-                  console.error("Failed to play after unmute:", err);
-                });
-              }
-            }}
-            className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#2D2AF5] hover:bg-[#1E1BD0] active:scale-95 text-white font-sans font-semibold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-indigo-400/30 flex items-center gap-1.5 cursor-pointer backdrop-blur-md transition-all hover:scale-105"
-            id="player-unmute-overlay-button"
-          >
-            <VolumeX className="w-4 h-4 animate-pulse text-indigo-200" />
-            <span>Tap to Unmute Stream</span>
-          </button>
-        )}
-
         {/* Loading / WebRTC Connecting State */}
         {loading && (
           <div className="absolute inset-0 bg-[#0A0A0B]/95 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-6 text-center">
